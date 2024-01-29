@@ -117,7 +117,7 @@ The same is true for `cduIac` which is closely following `cduLoad`.
 My best guess is that `cduLoad` is the heat request for the IDU and `cduIac` is related to the IDU's EEV.
 
 # Credits
-* Inspiration & initial protcol description from [ToshibaCarrierHvac](https://github.com/ormsport/ToshibaCarrierHvac)
+* Inspiration & initial protocol description from [ToshibaCarrierHvac](https://github.com/ormsport/ToshibaCarrierHvac)
 * ESPhome component structure from [esphome-lg-controller](https://github.com/JanM321/esphome-lg-controller)
 
 # License
