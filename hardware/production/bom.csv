@@ -1,0 +1,7 @@
+﻿Designator,Footprint,Quantity,Value,LCSC Part #
+"C4, C5",0402,2,100nF,C1525
+J1,CONN_S05B-PASK-2_JST,1,S05B-PASK-2LFSN,C489718
+J2,PinSocket_1x19_P2.54mm_Vertical,1,Conn_01x19_Female_1_to_19,C2932678
+J3,PinSocket_1x19_P2.54mm_Vertical,1,Conn_01x19_Female_20_to_38,C2932678
+R4,0603,1,10kR,C25804
+U2,TSSOP-20_4.4x6.5mm_P0.65mm,1,TXS0108EPW,C17206
