@@ -11,7 +11,9 @@ substitutions:
   # smart thermostat settings
   # the multiplier for the current setpoint error. higher values will result in more accurate setpoint tracking but also increase compressor cycles
   smart_thermostat_multiplier: "4" # XXX
-
+  # enable to prevent a thermal runaway (more than "1°C/multiplier" error) which units occasionally suffer from
+  smart_thermostat_runaway_protection: "true" # XXX
+  
   # enable for indoor units without condensate drain installed / will restrict operation to "heat" and "fan"
   disable_cooling_modes: "false" # XXX
   

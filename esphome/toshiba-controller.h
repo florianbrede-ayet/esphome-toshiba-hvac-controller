@@ -22,6 +22,7 @@ static const char* const TAG = "toshiba-controller";
 
 struct ConfigSettings {
     double smart_thermostat_multiplier = 4.0;
+    bool smart_thermostat_runaway_protection = false;
     bool disable_cooling_modes = false;
 };
 
@@ -1239,6 +1240,7 @@ private:
     std::deque<std::pair<double, long>> offset_history_;  // <error, time>
     long last_fcu_fan_off_millis_ = 0;
     double temperature_boost_mode = 0;
+    int thermal_runaway_fix = 0;
     uint8_t thermostat_rounding_mode = 0;
 
     void smart_thermostat_control() {
@@ -1316,17 +1318,48 @@ private:
         double target_setpoint =
             this->target_temperature + median_error + target_error * this->config_settings_.smart_thermostat_multiplier;
 
+        // occasionally, the devices suffer from thermal runaway. it will not perform the requested operation
+        // even if the error is significant and the setpoint is adjusted. 
+        // below we fix this by setting a plausible, but significant change in target temperature.
+        // this can increase compressor cycles, but keeps the error in check.
+        if (this->config_settings_.smart_thermostat_runaway_protection) {
+            if (target_error > std::max(0.25, 1.0/this->config_settings_.smart_thermostat_multiplier)) {
+                thermal_runaway_fix = 1;
+            }
+            else if (target_error < -std::max(0.25, 1.0/this->config_settings_.smart_thermostat_multiplier)) {
+                thermal_runaway_fix = -1;
+            }
+            else if (std::abs(target_error) < 0.15) {
+                thermal_runaway_fix = 0;
+            }
+
+            if (thermal_runaway_fix == 1) {
+                target_setpoint = std::max((double)this->target_temperature, target_setpoint);
+                target_setpoint = std::max((double)internal_idu_room_temperature_, target_setpoint);
+                target_setpoint = std::max((double)this->target_temperature+median_error, target_setpoint);
+                target_setpoint += 3.0;
+            } else if (thermal_runaway_fix == -1) {
+                target_setpoint = std::min((double)this->target_temperature, target_setpoint);
+                target_setpoint = std::min((double)internal_idu_room_temperature_, target_setpoint);
+                target_setpoint = std::min((double)this->target_temperature+median_error, target_setpoint);
+                target_setpoint -= 3.0;
+
+            }
+        }
+
+        // to account for the low 1°C precision of the device, we need to either ceil or floor the target.
+        // we switch only at extrema which ideally leads to a slow, but constant osciallation around the target
         if (target_error > 0.2) {
             thermostat_rounding_mode = 1;
         } else if (target_error < -0.2) {
-            thermostat_rounding_mode = 0;
+            thermostat_rounding_mode = -1;
         }
-
         uint8_t target_setpoint_int = std::floor(target_setpoint);
 
         if (thermostat_rounding_mode == 1) {
             target_setpoint_int = std::ceil(target_setpoint);
         }
+
 
         uint8_t min_setpoint =
             this->mode == climate::CLIMATE_MODE_HEAT ? MIN_TEMP_SETPOINT_HEATING : MIN_TEMP_SETPOINT_COOLING;
@@ -1349,15 +1382,15 @@ private:
             sensor_fcu_setpoint_temp_.publish_state(this->internal_target_temperature_);
             ESP_LOGD(TAG,
                      "smart_thermostat: set internal_target_temperature_ for target %.2f (current: %.2f) to %d (raw: "
-                     "%.2f) (fcuAirTemp: %.2f) with median_error %.2f (avg_error: %.2f)",
+                     "%.2f) (fcuAirTemp: %.2f) with median_error %.2f (avg_error: %.2f) and thermal_runaway_fix %d",
                      this->target_temperature, room_temp, target_setpoint_int, target_setpoint,
-                     this->sensor_fcu_air_temp_.get_state(), average_error);
+                     this->sensor_fcu_air_temp_.get_state(), median_error, average_error, thermal_runaway_fix);
         } else {
             ESP_LOGD(TAG,
                      "smart_thermostat: set internal_target_temperature_ for target %.2f (current: %.2f) to %d (raw: "
-                     "%.2f) (fcuAirTemp: %.2f) with median_error %.2f (avg_error: %.2f) [no change]",
+                     "%.2f) (fcuAirTemp: %.2f) with median_error %.2f (avg_error: %.2f) and thermal_runaway_fix %d [no change]",
                      this->target_temperature, room_temp, target_setpoint_int, target_setpoint,
-                     this->sensor_fcu_air_temp_.get_state(), average_error);
+                     this->sensor_fcu_air_temp_.get_state(), median_error, average_error, thermal_runaway_fix);
         }
 
         this->current_temperature = room_temp;

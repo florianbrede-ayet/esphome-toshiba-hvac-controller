@@ -173,6 +173,7 @@ climate:
                               );
       controller->config_settings().smart_thermostat_multiplier = ${smart_thermostat_multiplier};
       controller->config_settings().disable_cooling_modes = ${disable_cooling_modes};
+      controller->config_settings().smart_thermostat_runaway_protection = ${smart_thermostat_runaway_protection};
       App.register_component(controller);
       return {controller};
     climates:
