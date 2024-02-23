@@ -1,0 +1,184 @@
+esphome:
+  name: ${deviceid}
+  friendly_name: ${devicename}
+  includes:
+    - toshiba-controller.h
+
+esp8266:
+  board: esp01_1m
+
+logger:
+  # ESP8266 only - disable serial port logging, as the HeatPump component
+  # needs the sole hardware UART on the ESP8266
+  baud_rate: 0
+
+uart:
+  - id: ac_serial
+    tx_pin: 1
+    rx_pin: 3
+    baud_rate: 9600
+    parity: EVEN
+
+sensor:
+  - id: temperature_sensor
+    platform: homeassistant
+    internal: true
+    entity_id: ${temperature_sensor_entity_id}
+  - platform: custom
+    lambda: |-
+      return ((ToshibaController*)id(${deviceid}))->get_sensors();
+    sensors:
+      - name: Outdoor Temperature
+        unit_of_measurement: "°C"
+        icon: "mdi:home-thermometer-outline"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: fcuAirTemp
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: fcuSetpoint
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: fcuTcTemp
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: fcuTcjTemp
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: fcuFanRpm
+        unit_of_measurement: "rpm"
+        icon: "mdi:fan"
+        device_class: ""
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: cduTdTemp
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: cduTsTemp
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: cduTeTemp
+        unit_of_measurement: "°C"
+        icon: "mdi:thermometer"
+        device_class: "temperature"
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: cduLoad
+        unit_of_measurement: "%"
+        icon: "mdi:heat-pump-outline"
+        device_class: ""
+        state_class: "measurement"
+        accuracy_decimals: 0
+      - name: cduIac
+        device_class: ""
+        state_class: "measurement"
+        accuracy_decimals: 0
+  - platform: uptime
+    name: Uptime
+
+switch:
+  - platform: custom
+    lambda: |-
+      return ((ToshibaController*)id(${deviceid}))->get_switches();
+    switches:
+      - name: Internal Thermistor
+        on_turn_on:
+          - lambda: |-
+              ((ToshibaController*)id(${deviceid}))->set_internal_thermistor_switch(true);
+        on_turn_off:
+          - lambda: |-
+              ((ToshibaController*)id(${deviceid}))->set_internal_thermistor_switch(false);
+      - name: Ionizer
+        on_turn_on:
+          - lambda: |-
+              ((ToshibaController*)id(${deviceid}))->set_ionizer_switch(true);
+        on_turn_off:
+          - lambda: |-
+              ((ToshibaController*)id(${deviceid}))->set_ionizer_switch(false);
+
+select:
+  - platform: template
+    name: Special Mode
+    id: special_mode
+    optimistic: true
+    icon: mdi:star-circle-outline
+    options:
+      - "Standard"
+      - "High Power"
+      - "ECO"
+      - "8 Degrees"
+      - "Fireplace 1"
+      - "Fireplace 2"
+      - "Silent 1"
+      - "Silent 2"
+      - "Sleep Care"
+      - "Floor"
+      - "Comfort"
+    on_value:
+      - lambda: |-
+          ((ToshibaController*)id(${deviceid}))->set_special_mode_select(i);
+  - platform: template
+    name: Swing Mode
+    id: swing_mode
+    optimistic: true
+    icon: mdi:arrow-up-down
+    options:
+      - "Off"
+      - "Vertical"
+      - "Horizontal"
+      - "Vertical & Horizontal"
+      - "Fixed 1"
+      - "Fixed 2"
+      - "Fixed 3"
+      - "Fixed 4"
+      - "Fixed 5"
+    on_value:
+      - lambda: |-
+          ((ToshibaController*)id(${deviceid}))->set_swing_mode_select(i);
+  - platform: template
+    name: Power Select
+    id: power_select
+    optimistic: true
+    icon: mdi:power
+    options:
+      - "50%"
+      - "75%"
+      - "100%"
+    on_value:
+      - lambda: |-
+          ((ToshibaController*)id(${deviceid}))->set_power_select(i);
+
+
+climate:
+  - platform: custom
+    lambda: |-
+      auto* controller = new ToshibaController(id(ac_serial), id(temperature_sensor), 
+                                id(special_mode), id(swing_mode), id(power_select)
+                              );
+      controller->config_settings().smart_thermostat_multiplier = ${smart_thermostat_multiplier};
+      controller->config_settings().disable_cooling_modes = ${disable_cooling_modes};
+      controller->config_settings().smart_thermostat_runaway_protection = ${smart_thermostat_runaway_protection};
+      App.register_component(controller);
+      return {controller};
+    climates:
+      - name: ""
+        id: ${deviceid}
