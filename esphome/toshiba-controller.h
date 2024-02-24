@@ -627,8 +627,8 @@ class ToshibaController final : public climate::Climate, public Component {
                          (int32_t)sensor_fcu_fan_rpm_.get_state());
             }
         } else {
-            ESP_LOGV(TAG, "Received unknown message with length: %d and value %s", length,
-                     format_hex_pretty(rawData).c_str());
+            ESP_LOGV(TAG, "Received unknown message with length: %d and value %s", recv_buf_len_,
+                     format_hex_pretty(recv_buf_, recv_buf_len_).c_str());
             return;
         }
     }
