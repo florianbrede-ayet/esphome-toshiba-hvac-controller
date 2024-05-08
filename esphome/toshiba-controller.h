@@ -1354,10 +1354,10 @@ private:
         } else if (target_error < -0.2) {
             thermostat_rounding_mode = -1;
         }
-        uint8_t target_setpoint_int = std::floor(target_setpoint);
+        uint8_t target_setpoint_int = std::floor(std::min(255.0, std::max(0.0, target_setpoint)));
 
         if (thermostat_rounding_mode == 1) {
-            target_setpoint_int = std::ceil(target_setpoint);
+            target_setpoint_int = std::ceil(std::min(255.0, std::max(0.0, target_setpoint)));
         }
 
 
