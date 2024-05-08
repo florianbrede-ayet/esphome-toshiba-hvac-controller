@@ -1,7 +1,9 @@
 # ESPHome Toshiba / Carrier HVAC Controller over UART / WIFI Interface
 This repository contains both the hardware (kicad & production files) for an ESP32 module as well as an [ESPHome](https://esphome.io/) component to control Toshiba / Carrier RAS HVAC units independently from the Toshiba Cloud.
 
-It can be used as a local, low cost drop in replacement to control the AC from [Home Assistant](https://www.home-assistant.io/) or others.
+ESP8266 is also supported but requires custom wiring.
+
+The device can be used as a local, low cost drop in replacement to control the AC from [Home Assistant](https://www.home-assistant.io/) or others.
 
 Features of the component:
 * All operation modes & fan modes supported
@@ -22,7 +24,7 @@ Missing functionality:
 
 Requirements:
 * Toshiba/Carrier RAS single- or multisplit unit with built-in WIFI interface or WIFI module support (others might work as well, but untested)
-* ESP32 DevKit 38 Pins (others work as well but might require modifications)
+* ESP32 DevKit 38 Pins (others like NodeMCU 8266 work as well but might require modifications)
 * Toshiba HVAC module (see `hardware/` directory)
 * ESPhome installed to flash the ESP32 initially
 
@@ -45,9 +47,10 @@ Probably all Toshiba RAS units with wifi capabilities (built-in or with addition
 The software has been tested with the following outdoor units:
 * RAS-3M18U2AVG-E (Tripe-split)
 * RAS-2M14U2AVG-E (Dual-split)
-
+* RAS-25G2KVP-ND (Single-split)
 And these indoor units:
 * RAS-B10N4KVRG-E (Haori)
+* RAS-25G2AVP-ND (Super DAISEIKAI 8)
 
 Other units (with any compatible outdoor unit) that are almost certainly supported:
 * Toshiba Seiya
@@ -62,7 +65,7 @@ Other units (with any compatible outdoor unit) that are almost certainly support
 <img src="images/top.jpg" width="320px" alt="PCB Headers">
 
 The hardware needs three main components:
-1) **Microcontroller**. Any ESP32-DevKit with 38 Pins should work.
+1) **Microcontroller**. Any ESP32-DevKit with 38 Pins should work. ESP8266 is also supported, see "ESP8266" below.
 2) **Bidirectional Voltage Level Translator**. This is needed to connect to the UART interface and shift between 5V from the AC to 3.3V of the ESP32. I used a `Texas Instruments TXS0108EPWR`.
 3) **Connector** Toshiba uses as JST PASK connector for the WIFI modules cable, `JST S05B-PASK-2(LF)(SN)` is the correct connector. 
 
@@ -95,6 +98,12 @@ There are multiple ways to build the firmware, flash it on the device, and add t
 7. The device can now be added in Home Assistant (Settings => Devices & Services). HA will ask you for the encryption key from the YAML file.
  
 If you just want to connect to the device to view the debug logs, use `esphome logs toshiba-livingroom.yaml`.
+
+# ESP8266
+To use a (NodeMCU) ESP8266 instead of an ESP32 DevKit, take the `template8266.yaml` as reference instead.
+Also a bidirectional logic level converter  must be connected to `GPIO1 (TX)` and `GPIO3 (RX)`.
+
+The NodeMCU can be powered directly from the indoor unit's UART connector 5V Pin 3 through VIN.
 
 # FAQ
 ## Smart Thermostat / Internal Thermistor
