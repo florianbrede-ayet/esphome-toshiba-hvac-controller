@@ -273,6 +273,31 @@ class ToshibaController final : public climate::Climate, public Component {
         ESP_LOGI(TAG, "[REGISTER] received target temperature: %d (external change: %s)", value,
                  is_external_change ? "true" : "false");
 
+        // this is unreliable across units, so we discard the 15 byte "external change" temperature messages.
+        // instead we frequently poll the IDU target temperature and synchronize it with our internal state
+        if (is_external_change) {
+            ESP_LOGI(TAG, "ignoring unreliable external change message");
+            return;
+        }
+
+        if (this->internal_special_mode_ == ToshibaSpecialModes::SPECIAL_MODE_EIGHT_DEGREES && value - 16 < MIN_TEMP_SETPOINT_HEATING) {
+            ESP_LOGE(TAG, "received target temperature %d in SPECIAL_MODE_EIGHT_DEGREES - this is below the raw minimum of %d degrees",
+                     value, MIN_TEMP_SETPOINT_HEATING+16);
+            return;
+        }
+        if (this->internal_special_mode_ != ToshibaSpecialModes::SPECIAL_MODE_EIGHT_DEGREES && value > MAX_TEMP_SETPOINT) {
+            ESP_LOGE(TAG, "received target temperature %d - this is above the maximum of %d degrees",
+                     value, MAX_TEMP_SETPOINT);
+            return;
+        }
+
+        if (millis()-this->last_partial_register_request_millis_>=2500) {
+            ESP_LOGE(TAG, "received target temperature %d after %d ms - possibly out of sync, skipping update", value, millis()-this->last_partial_register_request_millis_);
+            return;
+        }
+        
+        const uint8_t old_internal_target_temperature = this->internal_target_temperature_;
+
         if (this->internal_special_mode_ == ToshibaSpecialModes::SPECIAL_MODE_EIGHT_DEGREES) {
             this->internal_target_temperature_ = value - 16;
         } else {
@@ -280,9 +305,8 @@ class ToshibaController final : public climate::Climate, public Component {
         }
         sensor_fcu_setpoint_temp_.publish_state(this->internal_target_temperature_);
 
-        if (this->switch_internal_thermistor_.state ||
-            is_external_change) {  // only update the climate target temperature if the change was external (IR
-                                   // controller) or the internal temperature sensor is used
+        if (this->switch_internal_thermistor_.state || (old_internal_target_temperature!=this->internal_target_temperature_)) {  
+            // only update the climate target temperature if IDU operates on a different temperature (external change through IR) or if the internal temperature sensor is used
             this->target_temperature = this->internal_target_temperature_;
             this->publish_state();
         }
@@ -1219,17 +1243,20 @@ public:
     }
 
 private:
+
     void request_registers_(bool full) {
         this->request_read_register_(ToshibaCommand::ROOM_TEMPERATURE);
         this->request_read_register_(ToshibaCommand::OUTDOOR_TEMPERATURE);
 
+        // these registers can be changed externally (IR remote) and could conflict with our internal state
+        this->request_read_register_(ToshibaCommand::SPECIAL_MODE);
+        this->request_read_register_(ToshibaCommand::TARGET_TEMPERATURE);
+
         if (full) {
             this->request_read_register_(ToshibaCommand::POWER_STATE);
             this->request_read_register_(ToshibaCommand::MODE);
-            this->request_read_register_(ToshibaCommand::TARGET_TEMPERATURE);
             this->request_read_register_(ToshibaCommand::FAN_MODE);
             this->request_read_register_(ToshibaCommand::SWING_MODE);
-            this->request_read_register_(ToshibaCommand::SPECIAL_MODE);
             this->request_read_register_(ToshibaCommand::IONIZER);
             this->request_read_register_(ToshibaCommand::POWER_SELECT);
             this->request_read_register_(ToshibaCommand::ODU_STATUS);
@@ -1250,6 +1277,11 @@ private:
         if (millis() - last_external_temperature_sensor_control_millis_ < 30000) {
             return;
         }
+
+        if (millis() - this->last_partial_register_request_millis_ < 2500) {  // after requesting the current IDU target_temp and special_mode, wait for 4000 ms before writing to the registers
+            return;
+        }
+
         last_external_temperature_sensor_control_millis_ = millis();
 
         if (switch_internal_thermistor_.state) {
@@ -1409,7 +1441,7 @@ private:
         smart_thermostat_control();  // will continously monitor but only apply changes if "internal thermostat" is
                                      // disabled
 
-        if (is_initialized_ && millis() > 30000) {
+        if (is_initialized_ && millis() > 30000 && millis()-last_external_temperature_sensor_control_millis_ > 2500) { // wait for 2.5s after we potentially wrote to the target temperature / special mode registers
             if (millis() - last_partial_register_request_millis_ > 10000) {
                 ESP_LOGD(TAG, "requesting partial registers");
                 last_partial_register_request_millis_ = millis();
