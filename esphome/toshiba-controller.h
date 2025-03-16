@@ -430,7 +430,7 @@ class ToshibaController final : public climate::Climate, public Component {
                 break;
             case ToshibaSpecialModes::SPECIAL_MODE_ECO:
                 ESP_LOGI(TAG, "[REGISTER] received special mode: %s", "ECO");
-                this->special_mode_select_->publish_state("Eco");
+                this->special_mode_select_->publish_state("ECO");
                 break;
             case ToshibaSpecialModes::SPECIAL_MODE_EIGHT_DEGREES:
                 ESP_LOGI(TAG, "[REGISTER] received special mode: %s", "EIGHT_DEGREES");
