@@ -859,10 +859,12 @@ public:
         this->mode = *call.get_mode();
         if (this->mode == climate::CLIMATE_MODE_OFF) {
             this->request_write_register_(ToshibaCommand::POWER_STATE, ToshibaState::STATE_OFF);
+			this->internal_power_state_ = ToshibaState::STATE_OFF;
             return;
         } else {
             if (internal_power_state_ == ToshibaState::STATE_OFF) {
                 this->request_write_register_(ToshibaCommand::POWER_STATE, ToshibaState::STATE_ON);
+				this->internal_power_state_ = ToshibaState::STATE_ON;
             }
         }
 
