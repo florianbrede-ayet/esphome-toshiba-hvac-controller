@@ -13,9 +13,9 @@ Features of the component:
 * Supports most special modes / merit modes like silent, fireplace, extended heating temperature range
 * Support for power modes on single split units and ionizer toggle
 * Additional information like fan speeds, compressor load, refrigerant / pipe temperatures
+* WiFi LED toggle (on/off via UART registers 0xDE/0xDF)
 
 Missing functionality:
-* WIFI led toggle (always on after controller handshake)
 * Manual defrost (probably unsupported over UART WIFI interface)
 * ODU error messages (not decoded yet)
 * Timer / schedules (had no interest in this functionality)
@@ -88,16 +88,28 @@ The following photos from a Toshiba Haori show how the built-in module can be re
 <img src="images/install5.jpg" width="320px" alt="Installation 5">
 
 # Firmware
-There are multiple ways to build the firmware, flash it on the device, and add the controller in Home Assistant. A rough summary:
+
+## ESPHome 2024+ (recommended)
+
+This fork adds an `external_components`-based component (`toshiba_controller/`) compatible with ESPHome 2024.x and later. The legacy `platform: custom` approach (used in `template.yaml`) no longer compiles on current ESPHome versions.
+
+To use the modern approach:
 1. Clone this repository and navigate to the `esphome` directory.
-2. Install ESPHome command line tools on Linux: https://esphome.io/guides/installing_esphome.html
-3. Ensure the Python virtual environment is activated (`source venv/bin/activate`).
-4. Copy `template.yaml` to (for example) `toshiba-livingroom.yaml` and edit the lines marked with `XXX`.
-5. Connect the ESP32 module to your computer with a micro USB cable. This is only needed the first time, after that it can use OTA updates over wifi.
-6. Run `esphome run toshiba-livingroom.yaml` to build the firmware and upload it to the device.
-7. The device can now be added in Home Assistant (Settings => Devices & Services). HA will ask you for the encryption key from the YAML file.
- 
-If you just want to connect to the device to view the debug logs, use `esphome logs toshiba-livingroom.yaml`.
+2. Install ESPHome: https://esphome.io/guides/installing_esphome.html
+3. Copy `template_v3.yaml` to (for example) `toshiba-livingroom.yaml` and fill in your WiFi credentials, API key, and temperature sensor entity ID.
+4. Connect the ESP32 module via USB (first flash only; subsequent updates use OTA).
+5. Run `esphome run toshiba-livingroom.yaml`.
+6. Add the device in Home Assistant (Settings → Devices & Services).
+
+## Legacy ESPHome (< 2024)
+
+If you are still on an older ESPHome version, use `template.yaml` with the single-file `toshiba-controller.h`. Note that `platform: custom` has been removed in ESPHome 2024.
+
+## Logs
+
+```bash
+esphome logs toshiba-livingroom.yaml
+```
 
 # ESP8266
 To use a (NodeMCU) ESP8266 instead of an ESP32 DevKit, take the `template8266.yaml` as reference instead.
