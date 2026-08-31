@@ -1,3 +1,5 @@
+
+
 # ESPHome Toshiba / Carrier HVAC Controller over UART / WIFI Interface
 This repository contains both the hardware (kicad & production files) for an ESP32 module as well as an [ESPHome](https://esphome.io/) component to control Toshiba / Carrier RAS HVAC units independently from the Toshiba Cloud.
 
@@ -96,7 +98,7 @@ The `toshiba_controller/` directory contains an `external_components`-based comp
 To use the component:
 1. Clone this repository and navigate to the `esphome` directory.
 2. Install ESPHome: https://esphome.io/guides/installing_esphome.html
-3. Copy `template_v3.yaml` to (for example) `toshiba-livingroom.yaml` and fill in your WiFi credentials, API key, and temperature sensor entity ID.
+3. Copy `template_v3.yaml` to (for example) `toshiba-livingroom.yaml` and fill in your WiFi credentials, API key, and temperature sensor entity ID (create a `secrets.yaml` for the `!secret` values or replace them).
 4. Connect the ESP32 module via USB (first flash only; subsequent updates use OTA).
 5. Run `esphome run toshiba-livingroom.yaml`.
 6. Add the device in Home Assistant (Settings → Devices & Services).
