@@ -1,0 +1,66 @@
+diff --git a/README.md b/README.md
+index 642c224..2160cf0 100644
+--- a/README.md
++++ b/README.md
+@@ -93,6 +93,8 @@ The following photos from a Toshiba Haori show how the built-in module can be re
+ 
+ The `toshiba_controller/` directory contains an `external_components`-based component compatible with ESPHome 2024.x and later. The legacy `platform: custom` approach no longer compiles on current ESPHome versions.
+ 
++> **Note:** ESPHome 2026.5.0 removed the deprecated `ClimateTraits::set_supports_*` accessors in favor of `add_feature_flags()`/`has_feature_flags()`. This component has been updated accordingly and is compatible with ESPHome 2026.5.0 and later (as well as 2024.x/2025.x).
++
+ To use the component:
+ 1. Clone this repository and navigate to the `esphome` directory.
+ 2. Install ESPHome: https://esphome.io/guides/installing_esphome.html
+diff --git a/esphome/toshiba_controller/toshiba_controller.h b/esphome/toshiba_controller/toshiba_controller.h
+index c6b3f44..bcfcfde 100644
+--- a/esphome/toshiba_controller/toshiba_controller.h
++++ b/esphome/toshiba_controller/toshiba_controller.h
+@@ -773,11 +773,9 @@ class ToshibaController final : public climate::Climate, public Component {
+         supported_traits_.add_supported_fan_mode(climate::CLIMATE_FAN_MEDIUM);
+         supported_traits_.add_supported_fan_mode(climate::CLIMATE_FAN_HIGH);
+ 
+-        supported_traits_.set_supported_custom_fan_modes({CUSTOM_FAN_MODE_LOW_MEDIUM, CUSTOM_FAN_MODE_MEDIUM_HIGH});
++        this->set_supported_custom_fan_modes({CUSTOM_FAN_MODE_LOW_MEDIUM, CUSTOM_FAN_MODE_MEDIUM_HIGH});
+ 
+-        supported_traits_.set_supports_current_temperature(true);
+-        supported_traits_.set_supports_two_point_target_temperature(false);
+-        supported_traits_.set_supports_action(false);
++        supported_traits_.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
+         supported_traits_.set_visual_min_temperature(
+             (int)std::min(MIN_TEMP_SETPOINT_HEATING, MIN_TEMP_SETPOINT_COOLING));
+         supported_traits_.set_visual_max_temperature(MAX_TEMP_SETPOINT);
+@@ -1102,22 +1100,30 @@ public:
+             return;
+         }
+ 
+-        // implement the index function as switch
++        ToshibaPowerSelection new_selection;
+         switch (power) {
+             case 0:
+-                this->internal_power_selection_ = ToshibaPowerSelection::POWER_50;
++                new_selection = ToshibaPowerSelection::POWER_50;
+                 break;
+             case 1:
+-                this->internal_power_selection_ = ToshibaPowerSelection::POWER_75;
++                new_selection = ToshibaPowerSelection::POWER_75;
+                 break;
+             case 2:
+-                this->internal_power_selection_ = ToshibaPowerSelection::POWER_100;
++                new_selection = ToshibaPowerSelection::POWER_100;
+                 break;
+             default:
+                 ESP_LOGE(TAG, "Unexpected power selection: %d", power);
+                 return;
+         }
+ 
++        // Skip write if value unchanged (prevents write-back loop when AC
++        // sends spontaneous power select push notifications)
++        if (new_selection == this->internal_power_selection_) {
++            ESP_LOGD(TAG, "power select unchanged, skipping write");
++            return;
++        }
++
++        this->internal_power_selection_ = new_selection;
+         this->request_write_register_(ToshibaCommand::POWER_SELECT, this->internal_power_selection_);
+     }
+ 
